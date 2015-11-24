@@ -10,8 +10,7 @@ output:
 # Introduction
 
 This is a short and simple tutorial of SparkR. We
-introduce SparkR and we show simple examples how to do
-an exploratory analysis.
+introduce SparkR and we show few simple examples.
 
 More information you can find on the following pages.
 
@@ -23,12 +22,11 @@ More information you can find on the following pages.
 - <https://cran.r-project.org/web/packages/pipeR>
 - <https://spark.apache.org/docs/latest/api/R/index.html>
 
-
 ## What is R?
 
 R is a __programming language__ that is very popular among Data
-Scientist (_better Computer Scientist than average Statistician and
-better Statistician than average Computer Scientist_).
+Scientist (_better Computer Scientist than an average Statistician and
+better Statistician than an average Computer Scientist_).
 
 ### Magic of R
 
@@ -52,12 +50,15 @@ better Statistician than average Computer Scientist_).
 - Framework: Hadoop MR, Hive, Pig,...
 - Local Storages: CSV, database, ...
 
-
-
 ## What are Spark and SparkR?
 
-**Spark**: Framework for cluster computing (you can use with Java, Scala, Python,...)
-**SparkR** (spark+R): Framework for cluster computing using R
+
+
+### Spark:
+Framework for cluster computing (you can use with Java, Scala, Python,...)
+
+### SparkR
+(spark+R): Framework for cluster computing using R
 
 <center>
 <img src="images/pic4.png" height="200px"/> 
@@ -72,6 +73,12 @@ better Statistician than average Computer Scientist_).
 
 # 1. SparkR initialization
 
+<center>
+<img src="images/spark.gif" height="200px"/> 
+</center>
+
+
+
 Lets set variable that store location of spark,
 
 ```{r}
@@ -85,12 +92,10 @@ SPARK_HOME <- "/home/bartek/programs/spark-1.5.2-bin-hadoop2.6/"
 ```{r LoadSparR}
 .libPaths(c(.libPaths(), file.path(SPARK_HOME,"R/lib/")))
 Sys.setenv('SPARKR_SUBMIT_ARGS'='"--packages" "com.databricks:spark-csv_2.10:1.2.0" "sparkr-shell"')
-##library(SparkR, lib.loc = paste0(SPARK_HOME, "R/lib/"))
-library(SparkR)#, lib.loc = paste0("/Users/CotePelaez/Documents/spark-1.5.2-bin-hadoop2.6/", "R/lib/"))
+library(SparkR)
 ```
 
-
-## 1.2 Load and install aditional packages
+## 1.2 Load aditional packages
 
 ```{r LoadPackages}
 library(rJava)
@@ -99,14 +104,13 @@ library(pipeR)
 library(whisker)
 ```
 
-
 ## 1.3 Initialization context
 
-For educational reason Spark allows to be run on one local machine. We get that by assigning master to local machine. 
+For educational reason Spark allows to be run on one local machine. We
+get that by assigning master to local machine.
 
 ```{r}
 sc <- sparkR.init(master = "local", sparkHome = SPARK_HOME)
-sqlContext <- sparkRSQL.init(sc)
 hiveContext <- sparkRHive.init(sc)
 ```
 
@@ -118,7 +122,7 @@ Now, we can get access to Spark UI at <http://localhost:4040>
 ## 2.1 Difference between **data.frame** and **DataFrame**
 
 DataFrame is Spark object that allows to do the computations on distributed storages directly in R. 
-We can create DataFrame object from standard data.frame as follows:
+We can create DataFrame object from standard data.frame as follows.
 
 ```{r DataFrame}
 class(mtcars)
@@ -132,12 +136,10 @@ head(df_mtcars)
 Note that this DataFrame object is not in the workspace of R; it is enterily in Spark.
 
 
-## 2.2 Different ways to do simple aggregation
+## 2.2 Different ways to do a simple aggregation
 
 ```{r Aggregation}
-
 count(filter(df_mtcars, "cyl = 6"))
-
 ```
 
 ### Method chaining (piping)
@@ -167,24 +169,32 @@ sql(hiveContext, "select count(*) from mtcars where cyl = 6") %>>% collect
 Spark does not execute calculations until we ask for results. Example:
 
 ```{r LazyExecution}
-path1 <- "data/test.csv"
+path1 <- "data/train.csv"
 df1 <- read.df(hiveContext, path1,
                source = "com.databricks.spark.csv",
                header="true",
                inferSchema = "true")
-class(df1)
+
 head(df1)
 
 p <- proc.time()
 df1_store3 <-
   df1 %>>% 
-  filter(df1$Store==3) 
+  groupBy("Date") %>>%
+  agg(Sales="sum")
 proc.time()-p
  
 p <- proc.time()
 df1_store3 %>>%
+  limit(10) %>>%
+  collect
+proc.time()-p
+
+p <- proc.time()
+df1_store3 %>>%
   count
 proc.time()-p
+
 
 ```
 
@@ -193,20 +203,46 @@ proc.time()-p
 ```{r}
 
 df1_store3_cache <-
-  df1 %>>% 
-  filter(.$Store==3) %>>%
+  df1_store3 %>>% 
   cache
 
 p <- proc.time()
-df1_store3_cache %>>% count
+df1_store3_cache %>>%
+  limit(10) %>>%
+  collect
 proc.time()-p
 
+p <- proc.time()
+df1_store3_cache %>>%
+  count
+proc.time()-p
 
-# eliminating if you dont need more
+# eliminate if you dont need more
 df1_store3_cache %>>% unpersist()
 ```
 
 ## 2.3.Basic manipulations in SparkR
+
+<center>
+<img src="images/kermit.gif" height="200px"/> 
+</center>
+
+
+Now its time to meet few SparkR functions. There are more of them, and
+they can be find in SparkR documentation.
+
+<https://spark.apache.org/docs/latest/api/R/index.html>
+
+* `describe`
+* `filter` 
+* `select` 
+* `distinct`
+* `mutate` (`withColumn`)
+* `collect`
+* `join`
+
+
+First we load our datasets.
 
 ```{r}
 
@@ -225,15 +261,7 @@ sd_df <- read.df(hiveContext, states_division_path,
                inferSchema = "true")
 
 ```
-
-
-* `describe`
-* `filter` 
-* `select` 
-* `distinct`
-* `mutate` (`withColumn`)
-* `collect`
-* `join`
+### Describe
 
 ```{r}
 sp_df %>>%
@@ -241,13 +269,17 @@ sp_df %>>%
   collect
 ```
 
+### Select, distinct
+
 ```{r}
 sd_df %>>%
-  select("state_division") %>>%
+  select(sd_df$state_division) %>>%
   distinct %>>%
   count
 ```
 
+### Mutate
+
 ```{r}
 sp_df %>>%
   mutate(Area_km2= (.$Area * 2.58999)) %>>%
@@ -258,13 +290,18 @@ sp_df %>>%
 
 ```
 
-```{r}
+### Join
 
+```{r}
 s_df <-
   sp_df %>>%
   mutate(Area_km2= (.$Area * 2.58999)) %>>%
   join(sd_df, .$state_abb == sd_df$state_abb)
+
+head(s_df)
 ```
+
+### GroupBy and agg
 
 ```{r}
 d_df <-
@@ -281,8 +318,9 @@ s_df %>>%
   collect()
 ```
 
-```{r}
+### Mixing queries and transformations
 
+```{r}
 registerTempTable(s_df, "s_table")
 
 s2_df <-
@@ -291,169 +329,153 @@ s2_df <-
 
 s2_df %>>%
   groupBy(.$state_division) %>>%
-  agg(total_income=sum(s2_dttotal_$income)) 
+  agg(total_income=sum(s2_df$total_income)) %>>%
+  collect
 ```
 
+# 3. Examples
 
-# 2. Examples
-
-## Example with Parquet
-
+## 3.1 Reading folder with csvs
 
 ```{r}
+path <- "data/subdata/test.csv"
+
+data <- read.df(hiveContext, path,
+               source = "com.databricks.spark.csv",
+               header="true",
+               inferSchema = "true")
+count(data)
+
+path <- "data/subdata/"
+
+data <- read.df(hiveContext, path,
+               source = "com.databricks.spark.csv",
+               header="true",
+               inferSchema = "true")
+count(data)
+```
+
+## 3.2 Example with Parquet
+
+```{r}
+sqlContext <- sparkRSQL.init(sc)
+
 train_df <-
   sqlContext %>>%
   read.df("data/trainParquet")
+
+head(train_df)
+printSchema(train_df)
 
 test_df <-
   sqlContext %>>%
   read.df("data/testParquet")
 
-
-train_df %>>%
-  printSchema
+printSchema(test_df)
 ````
 
-## 2.2. Exploratory Analysis
+## 3.3. Exploratory Analysis
 
-- Question 1: How many are stores there?
+### Question 1: How many stores are in train?
 
 ```{r DistinctStores}
-df1 %>>%
+train_df %>>%
   select("Store") %>>% distinct %>>% count
 ```
 
-- Question 2: Which day of the week has the highest number of promotions?
+### Question 2: Which day has the highest number of sales between January 2014 and July 2014? Plot evolution.
+
+```{r DistinctStores3}
+train_df %>>%
+  filter(.$Date <= '2014-07-31'  & .$Date >= '2014-01-01') %>>%
+  #filter("Date <= '2014-07-31' AND Date >= '2014-01-01'") %>>%
+  groupBy("Date") %>>%
+  agg(Sales=sum(train_df$Sales)) %>>%
+  collect %>>%
+  ggplot() +
+  geom_bar(aes(as.Date(Date), Sales), stat="identity") +
+  xlab("Date") +
+  theme_bw()
+```
+
+
+### Question 3: Which day of the week has the highest number of promotions?
 
 ```{r DistinctStores2}
-df1 %>>% filter("Promo = 1") %>>% groupBy("DayOfWeek") %>>% agg(Promo ="sum") %>>% collect
-  
-##  agg(df, age = "sum") 
-  
-##  select("Store") %>>% distinct %>>% count
+train_df %>>%
+  filter("Promo = 1") %>>%
+  groupBy("DayOfWeek") %>>%
+  agg(Promo=sum(train_df$Promo)) %>>%
+  orderBy(desc(.$Promo)) %>>%
+  collect
 ```
 
-# ML
+
+### Question 4: How to use parameters in queries.
 
 ```{r}
-library(MASS)
+train_df %>>%
+  registerTempTable("train")
 
-boston_df <- createDataFrame(hiveContext, Boston)
-lm.fit <- glm(medv~lstat,
-              data=boston_df,
-              family = "gaussian")
+query <- "SELECT COUNT(*) FROM train GROUP BY  Date"
 
-summary(lm.fit)
+sql(sqlContext, query) %>>%
+  head
 
 
+query_template <-
+  "SELECT COUNT(*) FROM train GROUP BY  {{{col}}}"
+
+data <- list( col="Date")
+query <- whisker.render(query_template, data)
+
+sql(sqlContext, query) %>>%
+  head
 ```
-library(ISLR)
 
-# Simple Linear Regression
+## 3.4 ML
 
-
-lm.fit=lm(medv~lstat,data=Boston)
-attach(Boston)
-lm.fit=lm(medv~lstat)
-lm.fit
-summary(lm.fit)
-names(lm.fit)
-coef(lm.fit)
-confint(lm.fit)
-predict(lm.fit,data.frame(lstat=(c(5,10,15))), interval="confidence")
-predict(lm.fit,data.frame(lstat=(c(5,10,15))), interval="prediction")
-plot(lstat,medv)
-abline(lm.fit)
-abline(lm.fit,lwd=3)
-abline(lm.fit,lwd=3,col="red")
-plot(lstat,medv,col="red")
-plot(lstat,medv,pch=20)
-plot(lstat,medv,pch="+")
-plot(1:20,1:20,pch=1:20)
-par(mfrow=c(2,2))
-plot(lm.fit)
-plot(predict(lm.fit), residuals(lm.fit))
-plot(predict(lm.fit), rstudent(lm.fit))
-plot(hatvalues(lm.fit))
-which.max(hatvalues(lm.fit))
-
-# Multiple Linear Regression
-
-lm.fit=lm(medv~lstat+age,data=Boston)
-summary(lm.fit)
-lm.fit=lm(medv~.,data=Boston)
-summary(lm.fit)
-library(car)
-vif(lm.fit)
-lm.fit1=lm(medv~.-age,data=Boston)
-summary(lm.fit1)
-lm.fit1=update(lm.fit, ~.-age)
+<center>
+<img src="images/kids.gif" height="200px"/> 
+</center>
 
 
-## 2.4. UNION
 
 ```{r}
-#' <br>
-#' Construimos una segunda funci??n `unir`, que haga el `merge` que necesitamos, pero que primero
-#' renombre una de las columnas `user_id` y as?? podamos obtener el `DataFrame` de la uni??n
-#' pero sin repetir esta columna:
+function() {
+  library(MASS)
 
-unir <- function(x,y){
-  y_aux  <- y %>>% withColumnRenamed("user_id","user_id_aux")
-  unido  <- x %>>% merge(y_aux,x$user_id==y_aux$user_id_aux)
-  quiero <- setdiff(names(unido),"user_id_aux")
-  unido %>>% select(as.list(quiero))
-}
+  boston_df <- createDataFrame(hiveContext, Boston)
+  lm.fit <-
+    glm(medv~lstat,
+        data=boston_df,
+        family = "gaussian")
 
-#' Probamos su funcionamiento:
-#unir(lista_df[[1]],lista_df[[2]])
+  summary(lm.fit)
 
+  intercept <- summary(lm.fit)$coefficients[1]
+  slope <- summary(lm.fit)$coefficients[2]
+
+  boston_df %>>%
+    sample(FALSE, 0.1) %>>%
+    collect %>>%
+    ggplot() + geom_point(aes(lstat, medv)) + geom_abline(intercept=intercept, slope=slope)
+
+
+  lm.fit=glm(medv~lstat+age, data=boston_df,  family = "gaussian")
+
+  summary(lm.fit)
+
+  #library(ISLR)
+  #Smarket_df <- createDataFrame(hiveContext, Smarket)
+  #glm.fit <-  glm(Direction~Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
+  #               data=Smarket_df, family = "binomial" )
+}()
 ```
 
-
-## 2.5. kafh
-
-```{r}
-#' Con `Reduce` usamos la funci??n `unir` de manera recursiva para todos los
-#'  elementos de la lista.
-
-# df_unido <- Reduce(unir,lista_df) %>>% cache
-# df_unido
-# df_unido %>>% count()
-# df_unido %>>% head
-
-```
+# Conclussions
 
 
-## 2.6. Exercices
-
-```{r}
-#' Para terminar, podemos usar `crosstab` para hacer una tabla de conteo. Por ejemplo entre
-#' las predicciones del modelo1 y las del modelo2, y despu??s hacer un gr??fico:
-
-# conteo <- df_unido %>% crosstab("modelo1_predict","modelo2_predict")
-# conteo
-# 
-# #' Manipulamos el `data.frame` local para usar la funci??n `mosaic`:
-# 
-# rownames(conteo) <- paste0("modelo1_",conteo[,1])
-# conteo <- conteo[,-1]
-# colnames(conteo) <- paste0("modelo2_",colnames(conteo))
-# 
-# #' ordeno:
-# conteo<-conteo[order(rownames(conteo)),order(colnames(conteo))]
-# conteo
-# 
-# #' y grafico:
-# mosaicplot(conteo,color=TRUE,main = "modelo1 vs modelo2")
-
-```
-
-
-## 2.3 Machine Learning
-
-
-# 3.Conclussions
 
 ```{r, echo=FALSE}
 sparkR.stop()
