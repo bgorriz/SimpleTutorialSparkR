@@ -1,4 +1,4 @@
-,state_abb,Population,Income,Illiteracy,Life_Exp,Murder,HS_Grad,Frost,Area
+State,state_abb,Population,Income,Illiteracy,Life_Exp,Murder,HS_Grad,Frost,Area
 Alabama,AL,3615,3624,2.1,69.05,15.1,41.3,20,50708
 Alaska,AK,365,6315,1.5,69.31,11.3,66.7,152,566432
 Arizona,AZ,2212,4530,1.8,70.55,7.8,58.1,15,113417
