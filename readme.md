@@ -1,5 +1,6 @@
-This project is a simple starting if you want to learn easyly SparkR.
+This is suppose to be an easy introduction SparkR.
 
-This work has been developed for Maria Jose Pelaez Montalvo and Bartlomiej Skorulski for Meetup in RugBcn 25 November 2015.
+It has been written by Maria Jose Pelaez Montalvo and
+Bartek Skorulski for Meetup in RugBcn 25 November 2015.
 
 Enjoy!
