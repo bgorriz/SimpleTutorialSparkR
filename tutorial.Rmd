@@ -475,9 +475,10 @@ function() {
 
 # Conclussions
 
+Don't forget to close spark if working on cloud.
 
 
-```{r, echo=FALSE}
+```{r}
 sparkR.stop()
 ```
 
